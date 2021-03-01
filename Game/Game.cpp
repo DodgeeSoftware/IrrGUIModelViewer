@@ -93,8 +93,8 @@ Game::Game()
 
     // CONFIG
     // Resolution
-    this->xResolution = 800;
-    this->yResolution = 600;
+    this->xResolution = 1024;
+    this->yResolution = 768;
     // Fullscreen Flag
     this->fullScreenFlag = false;
 }

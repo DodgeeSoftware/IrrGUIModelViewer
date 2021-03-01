@@ -8,9 +8,11 @@ ModelViewerGameState::ModelViewerGameState(Game* pGame) : IGameState(pGame)
     // CAMERA
     this->pCamera = 0;
     this->cameraDistance = -30;
-    cameraDistanceDelta = 1.0f;
-    this->theta = 0;
-    this->phi = 0;
+    this->cameraDistanceDelta = 1.0f;
+    this->defaultCameraNearValue = 0.1f;
+    // MODEL
+    this->pModel = 0;
+    this->modelFilename.clear();
     // GUISKIN
     this->pSkin = 0;
     // GUI
@@ -50,17 +52,13 @@ ModelViewerGameState::ModelViewerGameState(Game* pGame) : IGameState(pGame)
     this->pOptionsButton = 0;
     this->pExitButton = 0;
     this->pAboutButton = 0;
-    // MODEL
-    this->pModel = 0;
-    this->modelFilename.clear();
-//    // MOUSE CONTROL
-//    this->MouseXBufferPosition = 0.0f;
-//    this->MouseYBufferPosition = 0.0f;
-//    this->currentMouseX = 0.0f;
-//    this->currentMouseY = 0.0f;
-//    this->mouseDeltaX = 0.0f;
-//    this->mouseDeltaY = 0.0f;
-    // STATE STUFF
+    // CONTROLS
+    this->MouseXBufferPosition = 0.0f;
+    this->MouseYBufferPosition = 0.0f;
+    this->currentMouseX = 0.0f;
+    this->currentMouseY = 0.0f;
+    this->mouseDeltaX = 0.0f;
+    this->mouseDeltaY = 0.0f;
     this->allowMovement = true;
 }
 
@@ -71,7 +69,7 @@ ModelViewerGameState::ModelViewerGameState(ModelViewerGameState& other) : IGameS
 
 ModelViewerGameState::~ModelViewerGameState()
 {
-
+    // DESTRUCTOR
 }
 
 ModelViewerGameState& ModelViewerGameState::operator=(const ModelViewerGameState& other)
@@ -110,10 +108,7 @@ bool ModelViewerGameState::initBackground()
     // *************************
 
     // Set the background color
-    pGame->setBackgroundColor(irr::video::SColor(255, 128, 128, 128),
-                              irr::video::SColor(255, 128, 128, 128),
-                              irr::video::SColor(255, 15, 15, 15),
-                              irr::video::SColor(255, 15, 15, 15));
+    pGame->setBackgroundColor(irr::video::SColor(255, 128, 128, 128), irr::video::SColor(255, 128, 128, 128), irr::video::SColor(255, 15, 15, 15), irr::video::SColor(255, 15, 15, 15));
 
     // Success
     return true;
@@ -173,16 +168,12 @@ bool ModelViewerGameState::initGUI()
     // * INITIALISE THE GUI *
     // **********************
 
-    // GLOBALS
-    irr::video::IVideoDriver* pVideoDriver = pGame->getVideoDriver();
-    irr::gui::IGUISkin* pSkin = pGame->getGUIEnvironment()->getSkin();
-    irr::gui::IGUIEnvironment* pGUIEnvironment = pGame->getGUIEnvironment();
-    irr::core::dimension2d<irr::u32> screenSize = pGame->getVideoDriver()->getScreenSize();
-
     // Build NavigationBar
     this->buildNavigationBar();
+    // Build Options
     this->buildOptions();
-//    this->buildConsole();
+    //// Build Console
+    //this->buildConsole();
 
     // Success
     return true;
@@ -194,6 +185,7 @@ bool ModelViewerGameState::initCamera()
     // * INIT CAMERA *
     // ***************
 
+    // Make default Camera
     this->makeDefaultCamera();
 
     // Success
@@ -206,6 +198,7 @@ bool ModelViewerGameState::initLighting()
     // * INITIALISE LIGHTING *
     // ***********************
 
+    // Build a default lighting setup
     this->makeDefaultLight();
 
     // Success
@@ -218,10 +211,8 @@ bool ModelViewerGameState::initScene()
     // * INITIALISE SCENE *
     // ********************
 
-    //pCamera->setPosition(this->pModel->getPosition() + irr::core::vector3df(0.0f, 0.0f, 500.0f));
-    //pGame->getSceneManager()->addCubeSceneNode()->setPosition(irr::core::vector3df(0.0f, 0.0f, 0.0f));
-
-    //this->pModel = pGame->getSceneManager()->addAnimatedMeshSceneNode(pGame->getSceneManager()->getMesh("media/meshes/biggun.x"));
+    // Make default model
+    this->makeDefaultModel();
 
     // Success
     return true;
@@ -236,6 +227,7 @@ bool ModelViewerGameState::buildNavigationBar()
     irr::core::dimension2d<irr::u32> screenSize = pGame->getVideoDriver()->getScreenSize();
 
     // BUILD NAVIGATION BAR
+
     // Navigation Button IDs
     this->guiComponentID["FILE_OPEN_BUTTON"] = 101;
     this->guiComponentID["OPTIONS_BUTTON"] = 102;
@@ -244,14 +236,11 @@ bool ModelViewerGameState::buildNavigationBar()
     this->guiComponentID["ABOUT_BUTTON"] = 105;
     this->guiComponentID["EXIT_BUTTON"] = 106;
 
-    //screenSize
     int buttonCount = 6;
-    float idealButtonWidth = 100;
-    float idealButtonHeight = 32;
+    float idealButtonWidth = 100.0f;
+    float idealButtonHeight = 32.0f;
     if (((float)screenSize.Width / 6.0f) < idealButtonWidth)
-    {
         idealButtonWidth = ((float)screenSize.Width / 6.0f);
-    }
 
     float startX = (((float)screenSize.Width) / 2.0f) - ((float)buttonCount / 2.0f) * idealButtonWidth;
     float startY = screenSize.Height - idealButtonHeight;
@@ -279,32 +268,44 @@ void ModelViewerGameState::makeDefaultLight()
     irr::video::SLight lightData;
 
     // Set Ambient Light
-    pGame->getSceneManager()->setAmbientLight(irr::video::SColor(0xFF, 0x19, 0x19, 0x19));
+    pGame->getSceneManager()->setAmbientLight(irr::video::SColor(255, 25, 25, 25));
     // Set Shadow Colour
-    pGame->getSceneManager()->setShadowColor(irr::video::SColor(0x00, 0x00, 0x00, 0xFF));
+    pGame->getSceneManager()->setShadowColor(irr::video::SColor(255, 0, 0, 0));
 
     // Create a directional light
     lightData = irr::video::SLight();
     pLight = pGame->getSceneManager()->addLightSceneNode();
         lightData.Type = irr::video::ELT_DIRECTIONAL;
-        lightData.DiffuseColor = irr::video::SColorf(.23f, .23f, 0.25f, 1.0f);
+        lightData.DiffuseColor = irr::video::SColorf(0.23f, 0.23f, 0.25f, 1.0f);
         lightData.SpecularColor = irr::video::SColorf(1.0f, 1.0f, 1.0f, 1.0f);
         pLight->setLightData(lightData);
-        pLight->setRotation(irr::core::vector3df(0.0f, 90.0f - 45, -45.0f + -45.0f));
+        pLight->setRotation(irr::core::vector3df(0.0f, (90.0f - 45.0f), (-45.0f + -45.0f)));
 }
 
 void ModelViewerGameState::makeDefaultCamera()
 {
-    // Make the Camera
-    this->pCamera = pGame->getSceneManager()->addCameraSceneNode();
-        this->pCamera->bindTargetAndRotation(true);
-        this->pCamera->setPosition(irr::core::vector3df(0.0f, 0.0f, this->cameraDistance));
-        this->pCamera->setFarValue(100000.0f);
-        this->pCamera->setNearValue(0.01f);
-        pGame->getSceneManager()->setActiveCamera(this->pCamera);
-
+    // Default camera properties
     this->cameraDistance = -30.0f;
     this->cameraDistanceDelta = 1.0f;
+    // Make the Camera
+    this->pCamera = pGame->getSceneManager()->addCameraSceneNode();
+        this->pCamera->bindTargetAndRotation(false);
+        this->pCamera->setPosition(irr::core::vector3df(0.0f, 0.0f, this->cameraDistance));
+        this->pCamera->setFarValue(1000.0f);
+        this->pCamera->setNearValue(this->defaultCameraNearValue);
+    // Set active Camera
+    pGame->getSceneManager()->setActiveCamera(this->pCamera);
+}
+
+void ModelViewerGameState::makeDefaultModel()
+{
+    // Add a default Cube
+    this->pModel = pGame->getSceneManager()->addCubeSceneNode();
+            this->pModel->setPosition(irr::core::vector3df(0.0f, 0.0f, 0.0f));
+            this->pModel->setScale(irr::core::vector3df(1.0f, 1.0f, 1.0f));
+            this->pModel->setRotation(irr::core::vector3df(0.0f, 0.0f, 0.0f));
+    // Reset model filename
+    this->modelFilename.clear();
 }
 
 bool ModelViewerGameState::openModel(std::string filename)
@@ -330,52 +331,61 @@ bool ModelViewerGameState::openModel(std::string filename)
             this->pModel->setScale(irr::core::vector3df(1.0f, 1.0f, 1.0f));
             this->pModel->setRotation(irr::core::vector3df(0.0f, 0.0f, 0.0f));
             this->modelFilename = filename;
+        this->pCamera->setFarValue(fabs(this->pModel->getBoundingBox().MaxEdge.getLength()) * 10.0f);
+        this->pCamera->setNearValue(this->defaultCameraNearValue);
+        // Position the camera so that it can see thewhole model and reset the rotation
+        this->cameraDistance = -this->pModel->getBoundingBox().MaxEdge.getLength() * 2.0f;
+        this->cameraDistanceDelta = fabs(this->cameraDistance) / 10.0f;
     }
     else
     {
         // Clear the scene
         pGame->getSceneManager()->clear();
-
         // Remake the default camera
         this->makeDefaultCamera();
         // Remake the default lighting
         this->makeDefaultLight();
-
-        this->pModel = (irr::scene::IAnimatedMeshSceneNode*) pGame->getSceneManager()->addEmptySceneNode();
-            this->pModel->setPosition(irr::core::vector3df(0.0f, 0.0f, 0.0f));
-            this->pModel->setScale(irr::core::vector3df(1.0f, 1.0f, 1.0f));
-            this->pModel->setRotation(irr::core::vector3df(0.0f, 0.0f, 0.0f));
-            this->modelFilename.clear();
+        // Remake default model
+        this->makeDefaultModel();
     }
-
+    // Make a default material
+    irr::video::SMaterial defaultMaterial;
+        this->checkBoxBackFaceCullFlag = defaultMaterial.BackfaceCulling;
+        this->checkBoxFrontFaceCullFlag = defaultMaterial.FrontfaceCulling;
+        this->checkBoxVerticesFlag = defaultMaterial.PointCloud;
+        this->checkBoxLightingFlag = defaultMaterial.Lighting;
+        this->checkBoxWireframeFlag = defaultMaterial.Wireframe;
+    // Make sure the model uses defaault material params
     this->pModel->setMaterialFlag(irr::video::EMF_BACK_FACE_CULLING, this->checkBoxBackFaceCullFlag);
     this->pModel->setMaterialFlag(irr::video::EMF_FRONT_FACE_CULLING, this->checkBoxFrontFaceCullFlag);
     this->pModel->setMaterialFlag(irr::video::EMF_POINTCLOUD, this->checkBoxVerticesFlag);
     this->pModel->setMaterialFlag(irr::video::EMF_LIGHTING, this->checkBoxLightingFlag);
     this->pModel->setMaterialFlag(irr::video::EMF_WIREFRAME, this->checkBoxWireframeFlag);
     this->pModel->setMaterialType(irr::video::EMT_TRANSPARENT_ALPHA_CHANNEL_REF);
-
+    // Refresh Options Window
+    this->refreshOptionsWindow();
     // Set the window caption
     this->setCaption(filename);
-    // Position the camera so that it can see thewhole model and reset the rotation
-    this->cameraDistance = -this->pModel->getBoundingBox().MaxEdge.getLength() * 2.0f;
-    this->cameraDistanceDelta = this->cameraDistance / 10.0f;
-    this->theta = 0.0f;
-    this->phi = 0.0f;
 
     // Success
     return true;
-
 }
 
 bool ModelViewerGameState::reload()
 {
+    std::string oldModelFilename = this->modelFilename;
     // Clear the SceneManager
     pGame->getSceneManager()->clear();
     // Clear the Mesh Cache
     pGame->getSceneManager()->getMeshCache()->clear();
+    // Remake the default camera
+    this->makeDefaultCamera();
+    // Remake the default lighting
+    this->makeDefaultLight();
+    // Make defautl model
+    this->makeDefaultModel();
     // reload the model return success status
-    return this->openModel(this->modelFilename);
+    return this->openModel(oldModelFilename);
 }
 
 void ModelViewerGameState::closeModel()
@@ -388,11 +398,8 @@ void ModelViewerGameState::closeModel()
     this->makeDefaultCamera();
     // Remake the default lighting
     this->makeDefaultLight();
-    this->cameraDistance = -40.0f;
-    this->cameraDistanceDelta = 1.0f;
-    this->theta = 0.0f;
-    this->phi = 0.0f;
-    this->pModel = 0;
+    // Make defautl model
+    this->makeDefaultModel();
     // Clear the model Filename
     this->modelFilename.clear();
     // Set default caption
@@ -418,7 +425,9 @@ void ModelViewerGameState::buildOptions()
     this->guiComponentID["FRONTFACE_CULLING_CHECKBOX"] = 407;
     this->guiComponentID["BACKFACE_CULLING_CHECKBOX"] = 408;
     this->guiComponentID["LIGHTING_CHECKBOX"] = 409;
+
     // TODO: Build a gui in the range 0 - 1 and scale to screenSize
+
     // Make the OptionsWindow
     this->pOptionsWindow = pGame->getGUIEnvironment()->addWindow(irr::core::rect<irr::s32>(20,20,620,138), false, L"Options", 0, this->guiComponentID["OPTIONS_WINDOW"]);
         // Make the Vertices CheckBox
@@ -442,8 +451,32 @@ void ModelViewerGameState::buildOptions()
         this->pBackFaceCullCheckBox = pGame->getGUIEnvironment()->addCheckBox(this->checkBoxBackFaceCullFlag, irr::core::rect<irr::s32>(10 + 200,40, 100 + 200, 60), this->pOptionsWindow, this->guiComponentID["BACKFACE_CULLING_CHECKBOX"], L"BackFaceCulling");
         // Make the Lighting CheckBox
         this->pLightingCheckBox = pGame->getGUIEnvironment()->addCheckBox(this->checkBoxLightingFlag, irr::core::rect<irr::s32>(10 + 300, 20, 100 + 300, 40), this->pOptionsWindow, this->guiComponentID["LIGHTING_CHECKBOX"], L"Lighting");
-
+    // Hide the options Window
     this->pOptionsWindow->setVisible(false);
+}
+
+void ModelViewerGameState::refreshOptionsWindow()
+{
+    // Make the OptionsWindow reflect the material properties
+
+    if (this->pVerticesCheckBox != 0)
+        this->pVerticesCheckBox->setChecked(this->checkBoxVerticesFlag);
+    if (this->pWireFramesCheckBox != 0)
+        this->pWireFramesCheckBox->setChecked(this->checkBoxWireframeFlag);
+    if (this->pNormalsCheckBox != 0)
+        this->pNormalsCheckBox->setChecked(this->checkBoxNormalsFlag);
+    if (this->pTexturesCheckBox != 0)
+        this->pTexturesCheckBox->setChecked(this->checkBoxTextureFlag);
+    if (this->pShadersCheckBox != 0)
+        this->pShadersCheckBox->setChecked(this->checkBoxShadersFlag);
+    if (this->pVertexColoursCheckBox != 0)
+        this->pVertexColoursCheckBox->setChecked(this->checkBoxVertexColoursFlag);
+    if (this->pFrontFaceCullCheckBox != 0)
+        this->pFrontFaceCullCheckBox->setChecked(this->checkBoxFrontFaceCullFlag);
+    if (this->pBackFaceCullCheckBox != 0)
+        this->pBackFaceCullCheckBox->setChecked(this->checkBoxBackFaceCullFlag);
+    if (this->pLightingCheckBox != 0)
+        this->pLightingCheckBox->setChecked(this->checkBoxLightingFlag);
 }
 
 void ModelViewerGameState::showOptions()
@@ -474,9 +507,16 @@ void ModelViewerGameState::showAboutWindow()
 
     // TODO: Build a gui in the range 0 - 1 and scale to screenSize
 
+    // Clear up the About Window
+    if (this->pAboutWindow != 0)
+    {
+        this->pAboutWindow->remove();
+        delete this->pAboutWindow;
+        this->pAboutWindow = 0;
+    }
     // Show a Message Box
     this->guiComponentID["ABOUT_WINDOW"] = 10000;
-    //this->pAboutWindow = pGame->getGUIEnvironment()->addMessageBox(L"About", L"Model Viewer Version 0.1, (c) Dodgee Software. Authors: Shem Taylor", true, irr::gui::EMBF_OK, 0, this->guiComponentID["ABOUT_WINDOW"]);
+    // Make an About Window
     this->pAboutWindow = pGame->getGUIEnvironment()->addMessageBox(L"About", this->aboutWindowText.c_str(), true, irr::gui::EMBF_OK, 0, this->guiComponentID["ABOUT_WINDOW"]);
 }
 
@@ -489,8 +529,7 @@ void ModelViewerGameState::defaultCaption()
 void ModelViewerGameState::setCaption(std::string text)
 {
     // Set the window caption
-    irr::core::stringw caption = L"MeshFileViewer";
-    caption += ": ";
+    irr::core::stringw caption = L"MeshFileViewer: ";
     (text.length() > 0) ? caption += text.c_str() : caption += "No File Loaded";
     pGame->setWindowCaption(caption);
 }
@@ -512,44 +551,65 @@ void ModelViewerGameState::handleEvents()
         return;
     }
 
-    // Do Orbit Camera controls
-    if (this->allowMovement == true)
-    {
-        if (pGame->getInputSystem()->getMouse()->isScrollDown() == true)
-        {
-            this->cameraDistance += this->cameraDistanceDelta;
-        }
-        if (pGame->getInputSystem()->getMouse()->isScrollUp() == true)
-        {
-            this->cameraDistance -= this->cameraDistanceDelta;
-        }
+// %%%
+// 888888888888888888
 
-        if (pGame->getInputSystem()->getMouse()->isLeftButtonPressed() == true &&
-            pGame->getInputSystem()->getMouse()->isLeftDrag() == false)
-        {
-            //std::cout << "PRE DRAG" << std::endl;
-        }
-        if (pGame->getInputSystem()->getMouse()->isLeftButtonPressed() == true &&
-            pGame->getInputSystem()->getMouse()->isLeftDrag() == true)
-        {
-            //std::cout << "DRAGGING" << std::endl;
-            this->theta += -pGame->getInputSystem()->getMouse()->getXRelative() * .1f;
-            this->phi += -pGame->getInputSystem()->getMouse()->getYRelative() * .1f;
-        }
+    if (allowMovement == true)
+    {
+//        if (pGame->getInputSystem()->getMouse()->isLeftButtonToggled() == true && pGame->getInputSystem()->getMouse()->isRightButtonToggled() == true)
+//        {
+//            mouseDragStart = pGame->getCursorControl()->getRelativePosition();
+//            irr::core::position2df relMousePos = pGame->getCursorControl()->getRelativePosition();
+//            MouseXBufferPosition = relMousePos.X;
+//            MouseYBufferPosition = relMousePos.Y;
+//
+//            pGame->getCursorControl()->setPosition(irr::core::vector2df(0.5, 0.5));
+//            pGame->getCursorControl()->setVisible(false);
+//            std::cout <<
+//        }
+
+//        if((event.MouseInput.Event == irr::EMIE_RMOUSE_LEFT_UP && rightMouseButtonDown == true) || (event.MouseInput.Event == irr::EMIE_LMOUSE_LEFT_UP && leftMouseButtonDown == true))
+//        {
+//            rightMouseButtonDown = false;
+//            leftMouseButtonDown = false;
+//            pDevice->getCursorControl()->setPosition(irr::core::vector2df(MouseXBufferPosition, MouseYBufferPosition));
+//            pDevice->getCursorControl()->setVisible(true);
+//        }
+
+//        if(event.MouseInput.Event == irr::EMIE_MMOUSE_PRESSED_DOWN && middleMouseButtonDown == false)
+//        {
+//            middleMouseButtonDown = true;
+//            MouseXBufferPosition = pDevice->getCursorControl()->getRelativePosition().X;
+//            MouseYBufferPosition = pDevice->getCursorControl()->getRelativePosition().Y;
+//
+//            //pDevice->getCursorControl()->setPosition(irr::core::vector2df(0.5, 0.5));
+//            //pDevice->getCursorControl()->setVisible(false);
+//            pDevice->getCursorControl()->setPosition(0.5f, 0.5f);
+//            pDevice->getCursorControl()->setVisible(false);
+//        }
+
+//        if(event.MouseInput.Event == irr::EMIE_MMOUSE_LEFT_UP && middleMouseButtonDown == true)
+//        {
+//            middleMouseButtonDown = false;
+//            pDevice->getCursorControl()->setPosition(irr::core::vector2df(MouseXBufferPosition, MouseYBufferPosition));
+//            pDevice->getCursorControl()->setVisible(true);
+//        }
+
+//        if (pGame->getInputSystem()->getMouse()->isScrollDown() == true)
+//        {
+//            std::cout << cameraDistance << std::endl;
+//            this->cameraDistance += this->cameraDistanceDelta;
+//            this->pCamera->setPosition(irr::core::vector3df(0.0f, 0.0f, this->cameraDistance));
+//        }
+//        if (pGame->getInputSystem()->getMouse()->isScrollUp() == true)
+//        {
+//            std::cout << cameraDistance << std::endl;
+//            this->cameraDistance -= this->cameraDistanceDelta;
+//            this->pCamera->setPosition(irr::core::vector3df(0.0f, 0.0f, this->cameraDistance));
+//        }
     }
 
-//    // HANDLE LOG EVENTS
-//    for (int i = 0; i < pGame->getLogTextEventStack()->size(); i++)
-//    {
-//        // Grab the first event from the stack
-//        irr::SEvent logTextEvent = pGame->getLogTextEventStack()->top();
-//        // Remove the first item(i.e. current event being handled here) from the stack
-//        pGame->getLogTextEventStack()->pop();
-//        // Send a message to the console
-//        std::cout << logTextEvent.LogEvent.Text << std::endl;
-//        this->consoleBoxText += logTextEvent.LogEvent.Text;
-//        this->consoleBoxText += "\n";
-//    }
+// 888888888888888888888888
 }
 
 bool ModelViewerGameState::onEvent(const irr::SEvent& event)
@@ -561,6 +621,99 @@ bool ModelViewerGameState::onEvent(const irr::SEvent& event)
     // Globals
     irr::gui::IGUIEnvironment* pGUIEnvironment = pGame->getGUIEnvironment();
 
+    // Log Event
+    if (event.EventType == irr::EET_LOG_TEXT_EVENT)
+        return this->logEvent(event);
+    // GUI Event
+    if (event.EventType == irr::EET_GUI_EVENT)
+        return this->GUIEvent(event);
+    // Keyboard Event
+    if (event.EventType == irr::EET_KEY_INPUT_EVENT)
+        return this->keyboardEvent(event);
+    // Mouse Event
+    if (event.EventType == irr::EET_MOUSE_INPUT_EVENT)
+        return this->mouseEvent(event);
+    // Joystick Event
+    if (event.EventType == irr::EET_JOYSTICK_INPUT_EVENT)
+        return this->joystickEvent(event);
+
+    // Event Handled
+    return true;
+}
+
+bool ModelViewerGameState::keyboardEvent(const irr::SEvent& event)
+{
+    if (event.EventType == irr::EET_KEY_INPUT_EVENT)
+    {
+        // TODO: Handle keyboard events
+    }
+
+    // Event handled
+    return true;
+}
+
+bool ModelViewerGameState::mouseEvent(const irr::SEvent& event)
+{
+    if (event.EventType == irr::EET_MOUSE_INPUT_EVENT)
+    {
+        if (allowMovement == true)
+        {
+            if((event.MouseInput.Event == irr::EMIE_RMOUSE_PRESSED_DOWN && this->rightMouseButtonDown == false) || (event.MouseInput.Event == irr::EMIE_LMOUSE_PRESSED_DOWN && this->leftMouseButtonDown == false))
+            {
+                this->rightMouseButtonDown = true;
+                this->leftMouseButtonDown = true;
+                this->mouseDragStart = pGame->getCursorControl()->getRelativePosition();
+                irr::core::position2df relMousePos = pGame->getCursorControl()->getRelativePosition();
+                this->MouseXBufferPosition = relMousePos.X;
+                this->MouseYBufferPosition = relMousePos.Y;
+
+                pGame->getCursorControl()->setPosition(irr::core::vector2df(0.5f, 0.5f));
+                pGame->getCursorControl()->setVisible(false);
+            }
+            if((event.MouseInput.Event == irr::EMIE_RMOUSE_LEFT_UP && this->rightMouseButtonDown == true) || (event.MouseInput.Event == irr::EMIE_LMOUSE_LEFT_UP && this->leftMouseButtonDown == true))
+            {
+                this->rightMouseButtonDown = false;
+                this->leftMouseButtonDown = false;
+                pGame->getCursorControl()->setPosition(irr::core::vector2df(this->MouseXBufferPosition, this->MouseYBufferPosition));
+                pGame->getCursorControl()->setVisible(true);
+            }
+
+// %%%
+//            if(event.MouseInput.Event == irr::EMIE_MMOUSE_PRESSED_DOWN && this->middleMouseButtonDown == false)
+//            {
+//                this->middleMouseButtonDown = true;
+//                this->MouseXBufferPosition = pGame->getCursorControl()->getRelativePosition().X;
+//                MouseYBufferPosition = pGame->getCursorControl()->getRelativePosition().Y;
+//                pGame->getCursorControl()->setPosition(0.5f, 0.5f);
+//                pGame->getCursorControl()->setVisible(false);
+//            }
+
+//            if(event.MouseInput.Event == irr::EMIE_MMOUSE_LEFT_UP && this->middleMouseButtonDown == true)
+//            {
+//                this->middleMouseButtonDown = false;
+//                pGame->getCursorControl()->setPosition(irr::core::vector2df(this->MouseXBufferPosition, this->MouseYBufferPosition));
+//                pGame->getCursorControl()->setVisible(true);
+//            }
+
+            if(event.MouseInput.Event == irr::EMIE_MOUSE_WHEEL)
+            {
+                if(event.MouseInput.Wheel > 0.0f)
+                    this->cameraDistance = this->cameraDistance + this->cameraDistanceDelta;
+
+                if(event.MouseInput.Wheel < 0.0f)
+                    this->cameraDistance = this->cameraDistance - this->cameraDistanceDelta;
+
+                this->pCamera->setPosition(irr::core::vector3df(0.0f, 0.0f, this->cameraDistance));
+            }
+        }
+    }
+
+    // Event handled
+    return true;
+}
+
+bool ModelViewerGameState::GUIEvent(const irr::SEvent& event)
+{
     if (event.EventType == irr::EET_GUI_EVENT)
     {
         // Caller ID (Number of the control which pushed this event on the stack
@@ -623,7 +776,6 @@ bool ModelViewerGameState::onEvent(const irr::SEvent& event)
                     std::cout << "Close Button" << std::endl;
                     // Close Model
                     this->closeModel();
-                    return false;
                 }
                 // Reload Clicked
                 if (id == this->guiComponentID["RELOAD_BUTTON"])
@@ -642,26 +794,25 @@ bool ModelViewerGameState::onEvent(const irr::SEvent& event)
                 {
                     std::cout << "Exit Button" << std::endl;
                     this->quit();
-                    return false;
                 }
                 break;
             }
             case irr::gui::EGET_SCROLL_BAR_CHANGED:
             {
-//                std::cout << "EGET_SCROLL_BAR_CHANGED" << std::endl;
-//                const irr::s32 pos = ((irr::gui::IGUIScrollBar*)event.GUIEvent.Caller)->getPos();
-//                if (id == this->guiComponentID["CONSOLE_HORIZONTAL_SCROLLBAR"])
-//                {
-//                    std::cout << "CONSOLE_HORIZONTAL_SCROLLBAR" << std::endl;
-//                    // TODO: There doesn't seem to be away to make a textbox scroll :(
-//                    //this->pConsoleBox->
-//                }
-//                if (id == this->guiComponentID["CONSOLE_VERTICAL_SCROLLBAR"])
-//                {
-//                    std::cout << "CONSOLE_VERTICAL_SCROLLBAR" << std::endl;
-//                    // TODO: There doesn't seem to be away to make a textbox scroll :(
-//                    //this->pConsoleBox->
-//                }
+    //                std::cout << "EGET_SCROLL_BAR_CHANGED" << std::endl;
+    //                const irr::s32 pos = ((irr::gui::IGUIScrollBar*)event.GUIEvent.Caller)->getPos();
+    //                if (id == this->guiComponentID["CONSOLE_HORIZONTAL_SCROLLBAR"])
+    //                {
+    //                    std::cout << "CONSOLE_HORIZONTAL_SCROLLBAR" << std::endl;
+    //                    // TODO: There doesn't seem to be away to make a textbox scroll :(
+    //                    //this->pConsoleBox->
+    //                }
+    //                if (id == this->guiComponentID["CONSOLE_VERTICAL_SCROLLBAR"])
+    //                {
+    //                    std::cout << "CONSOLE_VERTICAL_SCROLLBAR" << std::endl;
+    //                    // TODO: There doesn't seem to be away to make a textbox scroll :(
+    //                    //this->pConsoleBox->
+    //                }
                 break;
             }
 
@@ -769,9 +920,14 @@ bool ModelViewerGameState::onEvent(const irr::SEvent& event)
                 break;
             }
             case irr::gui::EGET_MESSAGEBOX_YES:
+            {
                 break;
+            }
+
             case irr::gui::EGET_MESSAGEBOX_NO:
+            {
                 break;
+            }
             case irr::gui::EGET_MESSAGEBOX_OK:
             {
                 // If OK was clicked on the About window
@@ -779,6 +935,8 @@ bool ModelViewerGameState::onEvent(const irr::SEvent& event)
                 {
                     // Allow movement
                     this->allowMovement = true;
+                    // MessageBox is automatically destroyed by Irrlicht on OK
+                    this->pAboutWindow = 0;
                 }
                 break;
             }
@@ -789,42 +947,98 @@ bool ModelViewerGameState::onEvent(const irr::SEvent& event)
                 {
                     // Allow movement
                     this->allowMovement = true;
+                    // MessageBox is automatically destroyed by Irrlicht on Cancel
+                    this->pAboutWindow = 0;
                 }
                 break;
             }
             case irr::gui::EGET_EDITBOX_ENTER:
+            {
                 break;
+            }
             case irr::gui::EGET_EDITBOX_CHANGED:
+            {
                 break;
+            }
             case irr::gui::EGET_EDITBOX_MARKING_CHANGED:
+            {
                 break;
+            }
             case irr::gui::EGET_TAB_CHANGED:
+            {
                 break;
+            }
             case irr::gui::EGET_MENU_ITEM_SELECTED:
+            {
                 break;
+            }
             case irr::gui::EGET_COMBO_BOX_CHANGED:
+            {
                 break;
+            }
             case irr::gui::EGET_SPINBOX_CHANGED:
+            {
                 break;
+            }
             case irr::gui::EGET_TABLE_CHANGED:
+            {
                 break;
+            }
             case irr::gui::EGET_TABLE_HEADER_CHANGED:
+            {
                 break;
+            }
             case irr::gui::EGET_TABLE_SELECTED_AGAIN:
+            {
                 break;
+            }
             case irr::gui::EGET_TREEVIEW_NODE_DESELECT:
+            {
                 break;
+            }
             case irr::gui::EGET_TREEVIEW_NODE_SELECT:
+            {
                 break;
+            }
             case irr::gui::EGET_TREEVIEW_NODE_EXPAND:
+            {
                 break;
+            }
             case irr::gui::EGET_TREEVIEW_NODE_COLLAPSE:
+            {
                 break;
+            }
             default:
+            {
                 break;
+            }
         }
     }
 
+    // Event handled
+    return true;
+}
+
+bool ModelViewerGameState::joystickEvent(const irr::SEvent& event)
+{
+    if (event.EventType == irr::EET_JOYSTICK_INPUT_EVENT)
+    {
+        // TODO: Handle Joystick
+    }
+
+    // Event handled
+    return true;
+}
+
+bool ModelViewerGameState::logEvent(const irr::SEvent& event)
+{
+    if (event.EventType == irr::EET_LOG_TEXT_EVENT)
+    {
+        //this->consoleBoxText += event.LogEvent.Text;
+        //this->consoleBoxText += std::endl;;
+    }
+
+    // Event handled
     return true;
 }
 
@@ -834,6 +1048,30 @@ void ModelViewerGameState::think()
     // * THINK *
     // *********
 
+    if (this->allowMovement == true)
+    {
+        if (this->rightMouseButtonDown == true || this->leftMouseButtonDown == true)
+        {
+            irr::core::position2df relMousePos = pGame->getCursorControl()->getRelativePosition();
+            this->mouseDeltaX = relMousePos.X - 0.5f;
+            this->mouseDeltaY = 0.5f - relMousePos.Y;
+
+            this->pModel->setRotation(this->pModel->getRotation() + irr::core::vector3df(this->mouseDeltaY * 365.0f, -this->mouseDeltaX * 365.0f, 0.0f));
+            pGame->getCursorControl()->setPosition(irr::core::vector2df(0.5f, 0.5f));
+            pGame->getCursorControl()->setVisible(false);
+        }
+// %%%
+//        if (this->middleMouseButtonDown == true)
+//        {
+//            irr::core::position2df relMousePos = pGame->getCursorControl()->getRelativePosition();
+//            this->mouseDeltaX = relMousePos.X - 0.5f;
+//            this->mouseDeltaY = 0.5f - relMousePos.Y;
+//
+//            this->pModel->setPosition(this->pModel->getPosition() + irr::core::vector3df(this->mouseDeltaX * 25.0f, this->mouseDeltaY * 25.0f, 0.0f));
+//            pGame->getCursorControl()->setPosition(0.5f, 0.5f);
+//            pGame->getCursorControl()->setVisible(false);
+//        }
+    }
 }
 
 void ModelViewerGameState::update()
@@ -847,12 +1085,14 @@ void ModelViewerGameState::update()
 
     if (this->pModel != 0)
     {
-        this->pModel->setRotation(irr::core::vector3df(this->phi, this->theta, 0.0f));
         if (this->pCamera != 0)
+        {
             this->pCamera->setPosition(this->pModel->getPosition() + irr::core::vector3df(0.0f, 0.0f, this->cameraDistance));
+        }
     }
 
-
+    //// Set the Console Text
+    //this->pConsoleBox->setText(this->consoleBoxText.c_str());
 }
 
 void ModelViewerGameState::draw()
@@ -869,9 +1109,6 @@ void ModelViewerGameState::drawGUI()
     // * DRAW GUI *
     // ************
 
-    // Globals
-    irr::video::IVideoDriver* pVideoDriver = pGame->getVideoDriver();
-    irr::core::dimension2d<irr::u32> screenSize = pGame->getVideoDriver()->getScreenSize();
 }
 
 void ModelViewerGameState::exit()
@@ -893,15 +1130,41 @@ void ModelViewerGameState::exit()
     // GUI
     pGame->getGUIEnvironment()->clear();
 
+    // Light
+    this->pLight = 0;
+    // Camera
+    this->pCamera = 0;
     this->cameraDistance = -30.0f;
-    this->theta = 0.0f;
-    this->phi = 0.0f;
+    this->cameraDistanceDelta = 1.0f;
+    this->defaultCameraNearValue = 0.1f;
+    // Model
     this->pModel = 0;
-
-//    // CLEAR UP IRRLICHT BUFFERS
-//    pGame->getVideoDriver()->removeAllHardwareBuffers();
-//    pGame->getVideoDriver()->removeAllOcclusionQueries();
-//    pGame->getVideoDriver()->removeAllTextures();
+    this->modelFilename.clear();
+    // GUI
+    this->guiComponentID.clear();
+    this->pOpenButton = 0;
+    this->pOptionsButton = 0;
+    this->pCloseButton = 0;
+    this->pReloadButton = 0;
+    this->pAboutButton = 0;
+    this->pExitButton = 0;
+    this->pOptionsWindow = 0;
+        this->pVerticesCheckBox = 0;
+        this->pWireFramesCheckBox = 0;
+        this->pNormalsCheckBox = 0;
+        this->pTexturesCheckBox = 0;
+        this->pShadersCheckBox = 0;
+        this->pVertexColoursCheckBox = 0;
+        this->pFrontFaceCullCheckBox = 0;
+        this->pBackFaceCullCheckBox = 0;
+        this->pLightingCheckBox = 0;
+    this->pAboutWindow = 0;
+    this->aboutWindowText = L"";
+    //this->pConsoleBox = 0;
+    //this->consoleBoxText.clear();
+    //this->pScrollbarHorizontalConsole = 0;
+    //this->pScrollbarVerticalConsole = 0;
+    this->pOpenDialog = 0;
 }
 
 void ModelViewerGameState::start()
@@ -947,41 +1210,65 @@ void ModelViewerGameState::resume()
 
 void ModelViewerGameState::onWindowChangeResolution(int resolutionX, int resolutionY)
 {
+    // *******************************
+    // * ON WINDOW CHANGE RESOLUTION *
+    // *******************************
 
 }
 
 void ModelViewerGameState::onWindowFullScreen(bool state)
 {
+    // ************************
+    // * ON WINDOW FULLSCREEN *
+    // ************************
 
 }
 
 void ModelViewerGameState::onWindowReposition(int newX, int newY)
 {
+    // ************************
+    // * ON WINDOW REPOSITION *
+    // ************************
 
 }
 
 void ModelViewerGameState::onWindowResize(int newWidth, int newHeight)
 {
+    // ********************
+    // * ON WINDOW RESIZE *
+    // ********************
 
 }
 
 void ModelViewerGameState::onWindowClose()
 {
+    // *******************
+    // * ON WINDOW CLOSE *
+    // *******************
 
 }
 
 void ModelViewerGameState::onWindowRefresh()
 {
+    // *********************
+    // * ON WINDOW REFRESH *
+    // *********************
 
 }
 
 void ModelViewerGameState::onWindowFocusChange(bool state)
 {
+    // **************************
+    // * ON WINDOW FOCUS CHANGE *
+    // **************************
 
 }
 
 void ModelViewerGameState::onWindowIconify(bool state)
 {
+    // *********************
+    // * ON WINDOW ICONIFY *
+    // *********************
 
 }
 

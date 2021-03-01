@@ -59,6 +59,16 @@ class ModelViewerGameState : public IGameState
         virtual void handleEvents();
         //! Process events, from Irrlicht, as they happen (using this is optional. Use only if you are using the irrlicht event system)
         virtual bool onEvent(const irr::SEvent& event);
+        //! Keyboard event
+        virtual bool keyboardEvent(const irr::SEvent& event);
+        //! Mouse event
+        virtual bool mouseEvent(const irr::SEvent& event);
+        //! GUI event
+        virtual bool GUIEvent(const irr::SEvent& event);
+        //! joystick event
+        virtual bool joystickEvent(const irr::SEvent& event);
+        //! Log event
+        virtual bool logEvent(const irr::SEvent& event);
         //! Handle all state logic
         virtual void think();
         //! Interpolate to the next frame
@@ -81,6 +91,7 @@ class ModelViewerGameState : public IGameState
         virtual void resume();
 
     protected:
+        // State Timer
         Timer stateTimer;
 
     protected:
@@ -139,15 +150,32 @@ class ModelViewerGameState : public IGameState
         void makeDefaultLight();
         //! Make Default Camera
         void makeDefaultCamera();
+        //! Make Default Model
+        void makeDefaultModel();
 
     protected:
         irr::scene::ILightSceneNode* pLight;
         irr::scene::ICameraSceneNode* pCamera;
         float cameraDistance;
         float cameraDistanceDelta;
-        float theta;
-        float phi;
+        float defaultCameraNearValue;
+        //float theta;
+        //float phi;
+
         bool allowMovement;
+        bool rightMouseButtonDown;
+        bool middleMouseButtonDown;
+        bool leftMouseButtonDown;
+        irr::core::position2df mouseDragStart;
+        bool disableDrag;
+        float MouseXBufferPosition;
+        float MouseYBufferPosition;
+        float currentMouseX;
+        float currentMouseY;
+        float mouseDeltaX;
+        float mouseDeltaY;
+
+        //irr::core::stringw consoleBoxText;
 
     // GUI
     protected:
@@ -157,6 +185,10 @@ class ModelViewerGameState : public IGameState
         void buildOptions();
         ////! build Console
         //void buildConsole();
+
+    protected:
+        //! Refresh Options Window
+        void refreshOptionsWindow();
 
     protected:
         irr::gui::IGUISkin* pSkin;
@@ -218,7 +250,7 @@ class ModelViewerGameState : public IGameState
 
     protected:
         // Local refrence to the model scenenode
-        irr::scene::IAnimatedMeshSceneNode* pModel;
+        irr::scene::ISceneNode* pModel;
         // Local reference for the model filename
         std::string modelFilename;
         // Pointer to the Open Dialog
@@ -230,15 +262,6 @@ class ModelViewerGameState : public IGameState
         void defaultCaption();
         //! Set Window Caption
         void setCaption(std::string text);
-
-//    // MOUSE CONTROL RELATED STUFF
-//    protected:
-//        float MouseXBufferPosition;
-//        float MouseYBufferPosition;
-//        float currentMouseX;
-//        float currentMouseY;
-//        float mouseDeltaX;
-//        float mouseDeltaY;
 };
 
 #endif // MODELVIEWERGAMESTATE_H
