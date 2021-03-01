@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="IrrGUIModelViewer-MinGW-w64" />
+		<Option pch_mode="2" />
+		<Option compiler="mingw-w64" />
+		<Build>
+			<Target title="Debug">
+				<Option output="ModelViewer/ModelViewerD" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="ModelViewer" />
+				<Option object_output="./" />
+				<Option type="1" />
+				<Option compiler="mingw-w64" />
+				<Compiler>
+					<Add option="-g" />
+					<Add directory="Game" />
+					<Add directory="$(#Irrlicht18.include)" />
+					<Add directory="$(#Irrlicht18.base)/source/Irrlicht" />
+					<Add directory="Game/GameStates" />
+				</Compiler>
+				<Linker>
+					<Add library="Irrlicht" />
+					<Add directory="$(#Irrlicht18.lib)/Win32-gcc" />
+				</Linker>
+			</Target>
+			<Target title="Release">
+				<Option output="ModelViewer/ModelViewer" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="ModelViewer" />
+				<Option object_output="./" />
+				<Option type="1" />
+				<Option compiler="mingw-w64" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add directory="Game" />
+					<Add directory="$(#Irrlicht18.include)" />
+					<Add directory="$(#Irrlicht18.base)/source/Irrlicht" />
+					<Add directory="Game/GameStates" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+					<Add library="Irrlicht" />
+					<Add directory="$(#Irrlicht18.lib)/Win32-gcc" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add option="-fexceptions" />
+		</Compiler>
+		<Unit filename="Game/Game.cpp" />
+		<Unit filename="Game/Game.h" />
+		<Unit filename="Game/GameInput/GameInput.h" />
+		<Unit filename="Game/GameInput/GamePad.cpp" />
+		<Unit filename="Game/GameInput/GamePad.h" />
+		<Unit filename="Game/GameInput/InputSystem.cpp" />
+		<Unit filename="Game/GameInput/InputSystem.h" />
+		<Unit filename="Game/GameInput/Keyboard.cpp" />
+		<Unit filename="Game/GameInput/Keyboard.h" />
+		<Unit filename="Game/GameInput/Mouse.cpp" />
+		<Unit filename="Game/GameInput/Mouse.h" />
+		<Unit filename="Game/GameStates/GameStates.h" />
+		<Unit filename="Game/GameStates/IGameState.h" />
+		<Unit filename="Game/GameStates/ModelViewerGameState.cpp" />
+		<Unit filename="Game/GameStates/ModelViewerGameState.h" />
+		<Unit filename="Game/GameTimers/FrameCounter.cpp" />
+		<Unit filename="Game/GameTimers/FrameCounter.h" />
+		<Unit filename="Game/GameTimers/GameTimers.h" />
+		<Unit filename="Game/GameTimers/Timer.cpp" />
+		<Unit filename="Game/GameTimers/Timer.h" />
+		<Unit filename="Game/GameUtils/AudioUtils.h" />
+		<Unit filename="Game/GameUtils/FileUtils.h" />
+		<Unit filename="Game/GameUtils/GameUtils.h" />
+		<Unit filename="Game/GameUtils/IrrlichtUtils.h" />
+		<Unit filename="Game/GameUtils/MathUtils.h" />
+		<Unit filename="Game/GameUtils/MemoryUtils.h" />
+		<Unit filename="Game/GameUtils/NetworkingUtils.h" />
+		<Unit filename="Game/GameUtils/PhysicsUtils.h" />
+		<Unit filename="Game/GameUtils/ScriptUtils.h" />
+		<Unit filename="Game/GameUtils/StringUtils.h" />
+		<Unit filename="Game/GameUtils/VideoUtils.h" />
+		<Unit filename="ModelViewer/media/meshes/placeholder.txt" />
+		<Unit filename="ModelViewer/media/placeholder.txt" />
+		<Unit filename="main.cpp" />
+		<Extensions>
+			<code_completion />
+			<envvars />
+			<debugger />
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
